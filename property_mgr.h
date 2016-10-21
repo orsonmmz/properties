@@ -69,8 +69,8 @@ private:
 
         TYPE_ID m_id;
         std::vector<std::reference_wrapper<CLASS_DESC>> m_bases;
-        std::map<wxString, PROPERTY_BASE*> m_properties;
-        std::map<TYPE_ID, TYPE_CAST_BASE*> m_typeCasts;
+        std::map<wxString, std::unique_ptr<PROPERTY_BASE>> m_ownProperties;
+        std::map<TYPE_ID, std::unique_ptr<TYPE_CAST_BASE>> m_typeCasts;
         bool m_dirty;
         std::vector<PROPERTY_BASE*> m_allProperties;
 

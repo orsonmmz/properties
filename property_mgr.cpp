@@ -91,7 +91,7 @@ void PROPERTY_MANAGER::AddProperty( PROPERTY_BASE* aProperty )
     TYPE_ID hash = aProperty->TypeHash();
     m_properties.emplace( name, aProperty );
     CLASS_DESC& classDesc = getClass( hash );
-    classDesc.m_properties.emplace( name, aProperty );
+    classDesc.m_ownProperties.emplace( name, aProperty );
     markClassesDirty();
 }
 
@@ -176,8 +176,8 @@ void PROPERTY_MANAGER::CLASS_DESC::rebuildProperties()
 
 void PROPERTY_MANAGER::CLASS_DESC::collectPropsRecur( PROPERTY_LIST& aResult ) const
 {
-    for( auto& property : m_properties )
-        aResult.push_back( property.second );
+    for( auto& property : m_ownProperties )
+        aResult.push_back( property.second.get() );
 
     for( const auto& base : m_bases )
         base.get().collectPropsRecur( aResult );
