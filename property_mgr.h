@@ -78,7 +78,7 @@ private:
         void collectPropsRecur( PROPERTY_LIST& aResult ) const;
     };
 
-    std::map<wxString, std::pair<TYPE_ID, PROPERTY_BASE*>> m_properties;
+    std::map<wxString, PROPERTY_BASE*> m_properties;
     std::map<TYPE_ID, CLASS_DESC> m_classes;
 
     bool isOfType( TYPE_ID aDerived, TYPE_ID aBase ) const;

@@ -37,10 +37,10 @@ PROPERTY_BASE* PROPERTY_MANAGER::GetProperty( TYPE_ID aType, const wxString aPro
     if( it == m_properties.end() )
         return nullptr;
 
-    TYPE_ID type = it->second.first;
+    TYPE_ID type = it->second->TypeHash();
 
     if( isOfType( aType, type ) )
-        return it->second.second;
+        return it->second;
 
     return nullptr;
 }
@@ -89,7 +89,7 @@ void PROPERTY_MANAGER::AddProperty( PROPERTY_BASE* aProperty )
     wxASSERT_MSG( m_properties.count( name ) == 0, "Property name conflict" );
 
     TYPE_ID hash = aProperty->TypeHash();
-    m_properties.emplace( name, make_pair( hash, aProperty ) );
+    m_properties.emplace( name, aProperty );
     CLASS_DESC& classDesc = getClass( hash );
     classDesc.m_properties.emplace( name, aProperty );
     markClassesDirty();
