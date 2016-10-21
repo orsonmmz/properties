@@ -6,7 +6,6 @@ using namespace std;
 
 // TODO
 // handle different types of setters/getters (const, non-const, reference, pointer)
-// get a list of properties for a type
 // enums
 
 class A : public INSPECTED

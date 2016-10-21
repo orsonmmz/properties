@@ -46,19 +46,20 @@ PROPERTY_BASE* PROPERTY_MANAGER::GetProperty( TYPE_ID aType, const wxString aPro
 }
 
 
-std::list<PROPERTY_BASE*> PROPERTY_MANAGER::GetProperties( TYPE_ID aType ) const
+const PROPERTY_LIST& PROPERTY_MANAGER::GetProperties( TYPE_ID aType )
 {
-    /// @todo caching?
-    std::list<PROPERTY_BASE*> result;
+    static const PROPERTY_LIST empty;
+    auto it = m_classes.find( aType );
 
-    auto classDesc = m_classes.find( aType );
+    if( it == m_classes.end() )
+        return empty;
 
-    if( classDesc == m_classes.end() )
-        return result;
+    CLASS_DESC& classDesc = it->second;
 
-    getPropertiesRecur( classDesc->second, result );
+    if( classDesc.m_dirty )
+        classDesc.rebuildProperties();
 
-    return result;
+    return classDesc.m_allProperties;
 }
 
 
@@ -91,6 +92,7 @@ void PROPERTY_MANAGER::AddProperty( PROPERTY_BASE* aProperty )
     m_properties.emplace( name, make_pair( hash, aProperty ) );
     CLASS_DESC& classDesc = getClass( hash );
     classDesc.m_properties.emplace( name, aProperty );
+    markClassesDirty();
 }
 
 
@@ -111,6 +113,7 @@ void PROPERTY_MANAGER::InheritsAfter( TYPE_ID aDerived, TYPE_ID aBase )
     CLASS_DESC& derived = getClass( aDerived );
     CLASS_DESC& base = getClass( aBase );
     derived.m_bases.push_back( base );
+    markClassesDirty();
 
     wxASSERT_MSG( derived.m_bases.size() == 1
             || derived.m_typeCasts.count( aBase ) == 1,
@@ -150,18 +153,32 @@ PROPERTY_MANAGER::CLASS_DESC& PROPERTY_MANAGER::getClass( TYPE_ID aTypeId )
     auto it = m_classes.find( aTypeId );
 
     if( it == m_classes.end() )
-        tie( it, ignore ) = m_classes.emplace( make_pair( aTypeId, CLASS_DESC{ aTypeId } ) );
+        tie( it, ignore ) = m_classes.emplace( make_pair( aTypeId, CLASS_DESC( aTypeId ) ) );
 
     return it->second;
 }
 
 
-void PROPERTY_MANAGER::getPropertiesRecur( const CLASS_DESC& aClass,
-        PROPERTY_LIST& aResult ) const
+void PROPERTY_MANAGER::markClassesDirty()
 {
-    for( auto& property : aClass.m_properties )
+    for( auto& it : m_classes )
+        it.second.m_dirty = true;
+}
+
+
+void PROPERTY_MANAGER::CLASS_DESC::rebuildProperties()
+{
+    m_allProperties.clear();
+    collectPropsRecur( m_allProperties );
+    m_dirty = false;
+}
+
+
+void PROPERTY_MANAGER::CLASS_DESC::collectPropsRecur( PROPERTY_LIST& aResult ) const
+{
+    for( auto& property : m_properties )
         aResult.push_back( property.second );
 
-    for( const auto& base : aClass.m_bases )
-        getPropertiesRecur( base, aResult );
+    for( const auto& base : m_bases )
+        base.get().collectPropsRecur( aResult );
 }

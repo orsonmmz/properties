@@ -28,7 +28,6 @@
 
 #include <wx/string.h>
 
-#include <list>
 #include <map>
 #include <memory>
 #include <vector>
@@ -36,12 +35,12 @@
 class PROPERTY_BASE;
 class TYPE_CAST_BASE;
 
+using TYPE_ID = size_t;
+using PROPERTY_LIST = std::vector<PROPERTY_BASE*>;
+
 class PROPERTY_MANAGER
 {
 public:
-    using TYPE_ID = size_t;
-    using PROPERTY_LIST = std::list<PROPERTY_BASE*>;
-
     static PROPERTY_MANAGER& Instance()
     {
         static PROPERTY_MANAGER pm;
@@ -49,7 +48,7 @@ public:
     }
 
     PROPERTY_BASE* GetProperty( TYPE_ID aType, const wxString aProperty ) const;
-    PROPERTY_LIST GetProperties( TYPE_ID aType ) const;
+    const PROPERTY_LIST& GetProperties( TYPE_ID aType );
     void* TypeCast( void* aSource, TYPE_ID aBase, TYPE_ID aDerived ) const;
 
     void AddProperty( PROPERTY_BASE* aProperty );
@@ -63,10 +62,20 @@ private:
 
     struct CLASS_DESC
     {
+        CLASS_DESC( TYPE_ID aId )
+            : m_id( aId ), m_dirty( true )
+        {
+        }
+
         TYPE_ID m_id;
         std::vector<std::reference_wrapper<CLASS_DESC>> m_bases;
         std::map<wxString, PROPERTY_BASE*> m_properties;
         std::map<TYPE_ID, TYPE_CAST_BASE*> m_typeCasts;
+        bool m_dirty;
+        std::vector<PROPERTY_BASE*> m_allProperties;
+
+        void rebuildProperties();
+        void collectPropsRecur( PROPERTY_LIST& aResult ) const;
     };
 
     std::map<wxString, std::pair<TYPE_ID, PROPERTY_BASE*>> m_properties;
@@ -74,7 +83,7 @@ private:
 
     bool isOfType( TYPE_ID aDerived, TYPE_ID aBase ) const;
     CLASS_DESC& getClass( TYPE_ID aTypeId );
-    void getPropertiesRecur( const CLASS_DESC& aClass, PROPERTY_LIST& aResult ) const;
+    void markClassesDirty();
 };
 
 #endif /* PROPERTY_MGR_H */

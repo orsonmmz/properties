@@ -43,7 +43,7 @@ public:
     {
         // TODO check if property belongs to this class?
         PROPERTY_MANAGER& propMgr = PROPERTY_MANAGER::Instance();
-        PROPERTY_MANAGER::TYPE_ID thisType = TYPE_HASH( *this );
+        TYPE_ID thisType = TYPE_HASH( *this );
         void* object = propMgr.TypeCast( this, thisType, aProperty->TypeHash() );
         aProperty->set<T>( object, aValue );
     }
@@ -52,7 +52,7 @@ public:
     bool Set( const wxString& aProperty, T aValue )
     {
         PROPERTY_MANAGER& propMgr = PROPERTY_MANAGER::Instance();
-        PROPERTY_MANAGER::TYPE_ID thisType = TYPE_HASH( *this );
+        TYPE_ID thisType = TYPE_HASH( *this );
         PROPERTY_BASE* prop = propMgr.GetProperty( thisType, aProperty );
 
         if( prop )
@@ -68,7 +68,7 @@ public:
     T Get( PROPERTY_BASE* aProperty )
     {
         PROPERTY_MANAGER& propMgr = PROPERTY_MANAGER::Instance();
-        PROPERTY_MANAGER::TYPE_ID thisType = TYPE_HASH( *this );
+        TYPE_ID thisType = TYPE_HASH( *this );
         void* object = propMgr.TypeCast( this, thisType, aProperty->TypeHash() );
         return aProperty->get<T>( object );
     }
@@ -77,7 +77,7 @@ public:
     boost::optional<T> Get( const wxString& aProperty )
     {
         PROPERTY_MANAGER& propMgr = PROPERTY_MANAGER::Instance();
-        PROPERTY_MANAGER::TYPE_ID thisType = TYPE_HASH( *this );
+        TYPE_ID thisType = TYPE_HASH( *this );
         PROPERTY_BASE* prop = propMgr.GetProperty( thisType, aProperty );
         boost::optional<T> ret;
 
