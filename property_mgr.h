@@ -33,7 +33,7 @@
 #include <vector>
 
 class PROPERTY_BASE;
-class TYPE_CONVERTER;
+class TYPE_CAST_BASE;
 
 class PROPERTY_MANAGER
 {
@@ -47,37 +47,29 @@ public:
     }
 
     PROPERTY_BASE* GetProperty( TYPE_ID aType, const wxString aProperty ) const;
-
     void* TypeCast( void* aSource, TYPE_ID aBase, TYPE_ID aDerived ) const;
+
+    void AddProperty( PROPERTY_BASE* aProperty );
+    void AddTypeCast( TYPE_CAST_BASE* aCast );
+    void InheritsAfter( TYPE_ID aDerived, TYPE_ID aBase );
 
 private:
     PROPERTY_MANAGER()
     {
     }
 
-    void registerProperty( PROPERTY_BASE* aProperty );
-    void registerConverter( TYPE_CONVERTER& aConverter );
-
-    void inheritsAfter( TYPE_ID aDerived, TYPE_ID aBase );
-
-    std::map<wxString, std::pair<TYPE_ID, PROPERTY_BASE*>> m_properties;
-
     struct CLASS_DESC
     {
         TYPE_ID m_id;
         std::vector<std::reference_wrapper<CLASS_DESC>> m_bases;
-        std::map<TYPE_ID, std::reference_wrapper<TYPE_CONVERTER>> m_converters;
+        std::map<TYPE_ID, TYPE_CAST_BASE*> m_typeCasts;
     };
 
+    std::map<wxString, std::pair<TYPE_ID, PROPERTY_BASE*>> m_properties;
+    std::map<TYPE_ID, CLASS_DESC> m_classes;
+
     bool isOfType( TYPE_ID aDerived, TYPE_ID aBase ) const;
-
     CLASS_DESC& findClass( TYPE_ID aTypeId );
-
-    std::map<TYPE_ID, CLASS_DESC> m_classMap;
-
-    friend class PROPERTY_BASE;
-    friend struct INHERITS_AFTER_BASE;
-    friend class TYPE_CONVERTER;
 };
 
 #endif /* PROPERTY_MGR_H */

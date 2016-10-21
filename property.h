@@ -34,24 +34,22 @@
 #include <type_traits>
 #include <typeindex>
 
-#ifdef DEBUG_PROPERTY
-#include <map>
-std::map<size_t, std::string>& typeMap();
-#endif
-
 #define TYPE_HASH( x ) typeid( x ).hash_code()
 //#define TYPE_HASH( x ) typeid( std::decay<x>::type ).hash_code()
 
 class PROPERTY_BASE
 {
 public:
-    PROPERTY_BASE( const wxString& aName );
+    PROPERTY_BASE( const wxString& aName )
+        : m_name( aName )
+    {
+    }
 
     virtual ~PROPERTY_BASE()
     {
     }
 
-    const wxString& GetName() const
+    const wxString& Name() const
     {
         return m_name;
     }
@@ -73,13 +71,13 @@ public:
     virtual size_t TypeHash() const = 0;
 
 protected:
-    void registerForType( size_t aType );
     virtual void setter( void* aObject, wxAny& aValue ) = 0;
     virtual wxAny getter( void* aObject ) = 0;
 
 private:
     wxString m_name;
 };
+
 
 template<typename Owner, typename T>
 class PROPERTY : public PROPERTY_BASE
@@ -92,12 +90,6 @@ public:
     PROPERTY( const wxString& name, SETTER s, GETTER g ) :
         PROPERTY_BASE( name ), m_setter( s ), m_getter( g )
     {
-        registerForType( TYPE_HASH( Owner ) );
-
-#ifdef DEBUG_PROPERTY
-        typeMap()[TYPE_HASH( Owner )] = typeid( Owner ).name();
-#endif
-
         //static_assert(std::is_same<decltype(&Owner::AddProperty),
                 //void (Owner::*)(const wxString&, PROPERTY_BASE*)>::value,
                             //"Class does not define a static AddProperty() method");
@@ -128,25 +120,21 @@ protected:
 };
 
 
-class TYPE_CONVERTER
+class TYPE_CAST_BASE
 {
 public:
     virtual void* operator()( void* aPointer ) const = 0;
-    virtual size_t GetBaseHash() const = 0;
-    virtual size_t GetDerivedHash() const = 0;
-
-protected:
-    void registerConverter();
+    virtual size_t BaseHash() const = 0;
+    virtual size_t DerivedHash() const = 0;
 };
 
 
 template<typename Base, typename Derived>
-class TYPE_CAST : public TYPE_CONVERTER
+class TYPE_CAST : public TYPE_CAST_BASE
 {
 public:
     TYPE_CAST()
     {
-        registerConverter();
     }
 
     void* operator()( void* aPointer ) const override
@@ -155,21 +143,15 @@ public:
         return static_cast<Derived*>( base );
     }
 
-    size_t GetBaseHash() const override
+    size_t BaseHash() const override
     {
         return TYPE_HASH( Base );
     }
 
-    size_t GetDerivedHash() const override
+    size_t DerivedHash() const override
     {
         return TYPE_HASH( Derived );
     }
-};
-
-
-struct INHERITS_AFTER_BASE
-{
-    INHERITS_AFTER_BASE( size_t aDerived, size_t aBase );
 };
 
 #endif /* PROPERTY_H */

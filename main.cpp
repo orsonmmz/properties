@@ -59,19 +59,56 @@ public:
 int m_aa;
 };
 
-static PROPERTY<A, int> prop1( "A", &A::setA, &A::getA );
-static PROPERTY<A, const wxPoint&> prop2( "point", &A::setPoint, &A::getPoint );
-static PROPERTY<B, int> prop3( "C", &B::setC, &B::getC );
-static PROPERTY<C, bool> prop4( "bool", &C::setBool, &C::getBool );
-static PROPERTY<C, int> prop6( "new", &C::setNew, &C::getNew );
-static PROPERTY<D, D::enum_test> prop5( "enum", &D::setEnum, &D::getEnum );
-static INHERITS_AFTER_BASE a( TYPE_HASH( B ), TYPE_HASH( A ) );
-static INHERITS_AFTER_BASE b( TYPE_HASH( D ), TYPE_HASH( A ) );
-static INHERITS_AFTER_BASE c( TYPE_HASH( D ), TYPE_HASH( C ) );
-static TYPE_CAST<D, C> DtoC;
-static TYPE_CAST<D, A> DtoA;
+static class CLASS_A_DESC
+{
+public:
+    CLASS_A_DESC()
+    {
+        PROPERTY_MANAGER& propMgr = PROPERTY_MANAGER::Instance();
+        propMgr.AddProperty( new PROPERTY<A, int>( "A", &A::setA, &A::getA ) );
+        propMgr.AddProperty( new PROPERTY<A, const wxPoint&>( "point", &A::setPoint, &A::getPoint ) );
+    }
+} _CLASS_A_DESC;
 
-main()
+static class CLASS_B_DESC
+{
+public:
+    CLASS_B_DESC()
+    {
+        PROPERTY_MANAGER& propMgr = PROPERTY_MANAGER::Instance();
+        propMgr.AddProperty( new PROPERTY<B, int>( "C", &B::setC, &B::getC ) );
+        propMgr.InheritsAfter( TYPE_HASH( B ), TYPE_HASH( A ) );
+    }
+} _CLASS_B_DESC;
+
+static class CLASS_C_DESC
+{
+public:
+    CLASS_C_DESC()
+    {
+        PROPERTY_MANAGER& propMgr = PROPERTY_MANAGER::Instance();
+        propMgr.AddProperty( new PROPERTY<C, bool>( "bool", &C::setBool, &C::getBool ) );
+        propMgr.AddProperty( new PROPERTY<C, int>( "new", &C::setNew, &C::getNew ) );
+        propMgr.InheritsAfter( TYPE_HASH( C ), TYPE_HASH( A ) );
+    }
+} _CLASS_C_DESC;
+
+static class CLASS_D_DESC
+{
+public:
+    CLASS_D_DESC()
+    {
+        PROPERTY_MANAGER& propMgr = PROPERTY_MANAGER::Instance();
+        propMgr.AddProperty( new PROPERTY<D, D::enum_test>( "enum", &D::setEnum, &D::getEnum ) );
+        propMgr.AddTypeCast( new TYPE_CAST<D, A> );
+        propMgr.AddTypeCast( new TYPE_CAST<D, C> );
+        propMgr.InheritsAfter( TYPE_HASH( D ), TYPE_HASH( A ) );
+        propMgr.InheritsAfter( TYPE_HASH( D ), TYPE_HASH( C ) );
+    }
+} _CLASS_D_DESC;
+
+
+int main()
 {
     A a;
     B b;

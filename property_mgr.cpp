@@ -51,46 +51,52 @@ void* PROPERTY_MANAGER::TypeCast( void* aSource, TYPE_ID aBase, TYPE_ID aDerived
     if( aBase == aDerived )
         return aSource;
 
-    auto classDesc = m_classMap.find( aBase );
+    auto classDesc = m_classes.find( aBase );
 
-    if( classDesc == m_classMap.end() )
+    if( classDesc == m_classes.end() )
         return aSource;
 
-    auto converters = classDesc->second.m_converters;
+    auto& converters = classDesc->second.m_typeCasts;
     auto converter = converters.find( aDerived );
 
     if( converter == converters.end() )
         return aSource;
 
-    return converter->second( aSource );
+    return (*converter->second)( aSource );
 }
 
 
-void PROPERTY_MANAGER::registerProperty( PROPERTY_BASE* aProperty )
+void PROPERTY_MANAGER::AddProperty( PROPERTY_BASE* aProperty )
 {
-    const wxString& name = aProperty->GetName();
-    TYPE_ID hash = aProperty->TypeHash();
+    const wxString& name = aProperty->Name();
     wxASSERT_MSG( m_properties.count( name ) == 0, "Property name conflict" );
+
+    TYPE_ID hash = aProperty->TypeHash();
     m_properties.emplace( name, make_pair( hash, aProperty ) );
 }
 
 
-void PROPERTY_MANAGER::registerConverter( TYPE_CONVERTER& aConverter )
+void PROPERTY_MANAGER::AddTypeCast( TYPE_CAST_BASE* aCast )
 {
-    TYPE_ID derivedHash = aConverter.GetDerivedHash();
-    CLASS_DESC& classDesc = findClass( aConverter.GetBaseHash() );
-    wxASSERT_MSG( classDesc.m_converters.count( derivedHash ) == 0,
-            "Such converter already exists" );
-    classDesc.m_converters.emplace( derivedHash, aConverter );
+    TYPE_ID derivedHash = aCast->DerivedHash();
+    CLASS_DESC& classDesc = findClass( aCast->BaseHash() );
+    auto& typeCasts = classDesc.m_typeCasts;
+    wxASSERT_MSG( typeCasts.count( derivedHash ) == 0, "Such converter already exists" );
+    typeCasts.emplace( derivedHash, aCast );
 }
 
 
-void PROPERTY_MANAGER::inheritsAfter( TYPE_ID aDerived, TYPE_ID aBase )
+void PROPERTY_MANAGER::InheritsAfter( TYPE_ID aDerived, TYPE_ID aBase )
 {
-    assert( aDerived != aBase );
-    CLASS_DESC& derivedNode = findClass( aDerived );
-    CLASS_DESC& baseNode = findClass( aBase );
-    derivedNode.m_bases.push_back( baseNode );
+    wxASSERT_MSG( aDerived != aBase, "Class cannot inherit from itself" );
+
+    CLASS_DESC& derived = findClass( aDerived );
+    CLASS_DESC& base = findClass( aBase );
+    derived.m_bases.push_back( base );
+
+    wxASSERT_MSG( derived.m_bases.size() == 1
+            || derived.m_typeCasts.count( aBase ) == 1,
+            "You need to add a TYPE_CAST for classes inheriting from multiple bases" );
 }
 
 
@@ -99,19 +105,19 @@ bool PROPERTY_MANAGER::isOfType( TYPE_ID aDerived, TYPE_ID aBase ) const
     if( aDerived == aBase )
         return true;
 
-    auto derived = m_classMap.find( aDerived );
+    auto derived = m_classes.find( aDerived );
 
-    if( derived == m_classMap.end() )
+    if( derived == m_classes.end() )
         return false;
 
     // BFS search
-    for( auto base : derived->second.m_bases )
+    for( auto& base : derived->second.m_bases )
     {
         if( base.get().m_id == aBase )
             return true;
     }
 
-    for( auto base : derived->second.m_bases )
+    for( auto& base : derived->second.m_bases )
     {
         if( isOfType( base.get().m_id, aBase ) )
             return true;
@@ -123,10 +129,10 @@ bool PROPERTY_MANAGER::isOfType( TYPE_ID aDerived, TYPE_ID aBase ) const
 
 PROPERTY_MANAGER::CLASS_DESC& PROPERTY_MANAGER::findClass( TYPE_ID aTypeId )
 {
-    auto it = m_classMap.find( aTypeId );
+    auto it = m_classes.find( aTypeId );
 
-    if( it == m_classMap.end() )
-        tie(it, ignore) = m_classMap.emplace( make_pair( aTypeId, CLASS_DESC{ aTypeId } ) );
+    if( it == m_classes.end() )
+        tie(it, ignore) = m_classes.emplace( make_pair( aTypeId, CLASS_DESC{ aTypeId } ) );
 
     return it->second;
 }
