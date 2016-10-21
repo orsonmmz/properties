@@ -29,9 +29,11 @@
 #include <wx/string.h>
 
 #include <map>
+#include <memory>
 #include <vector>
 
 class PROPERTY_BASE;
+class TYPE_CONVERTER;
 
 class PROPERTY_MANAGER
 {
@@ -46,30 +48,36 @@ public:
 
     PROPERTY_BASE* GetProperty( TYPE_ID aType, const wxString aProperty ) const;
 
+    void* TypeCast( void* aSource, TYPE_ID aBase, TYPE_ID aDerived ) const;
+
 private:
     PROPERTY_MANAGER()
     {
     }
 
-    void registerProperty( TYPE_ID aType, PROPERTY_BASE* aProperty );
+    void registerProperty( PROPERTY_BASE* aProperty );
+    void registerConverter( TYPE_CONVERTER& aConverter );
+
     void inheritsAfter( TYPE_ID aDerived, TYPE_ID aBase );
 
     std::map<wxString, std::pair<TYPE_ID, PROPERTY_BASE*>> m_properties;
 
-    struct CLASS_TREE_NODE
+    struct CLASS_DESC
     {
         TYPE_ID m_id;
-        std::vector<std::reference_wrapper<CLASS_TREE_NODE>> m_bases;
+        std::vector<std::reference_wrapper<CLASS_DESC>> m_bases;
+        std::map<TYPE_ID, std::reference_wrapper<TYPE_CONVERTER>> m_converters;
     };
 
     bool isOfType( TYPE_ID aDerived, TYPE_ID aBase ) const;
 
-    CLASS_TREE_NODE& findClassNode( TYPE_ID aTypeId );
+    CLASS_DESC& findClass( TYPE_ID aTypeId );
 
-    std::map<TYPE_ID, CLASS_TREE_NODE> m_classTree;
+    std::map<TYPE_ID, CLASS_DESC> m_classMap;
 
     friend class PROPERTY_BASE;
     friend struct INHERITS_AFTER_BASE;
+    friend class TYPE_CONVERTER;
 };
 
 #endif /* PROPERTY_MGR_H */

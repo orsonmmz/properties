@@ -34,7 +34,7 @@ PROPERTY_BASE::PROPERTY_BASE( const wxString& aName )
 
 void PROPERTY_BASE::registerForType( size_t aType )
 {
-    PROPERTY_MANAGER::Instance().registerProperty( aType, this );
+    PROPERTY_MANAGER::Instance().registerProperty( this );
 }
 
 
@@ -42,3 +42,18 @@ INHERITS_AFTER_BASE::INHERITS_AFTER_BASE( size_t aDerived, size_t aBase )
 {
     PROPERTY_MANAGER::Instance().inheritsAfter( aDerived, aBase );
 }
+
+
+void TYPE_CONVERTER::registerConverter()
+{
+    PROPERTY_MANAGER::Instance().registerConverter( *this );
+}
+
+
+#ifdef DEBUG_PROPERTY
+std::map<size_t, std::string>& typeMap()
+{
+    static std::map<size_t, std::string> map;
+    return map;
+}
+#endif

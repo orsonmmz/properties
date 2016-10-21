@@ -46,19 +46,50 @@ PROPERTY_BASE* PROPERTY_MANAGER::GetProperty( TYPE_ID aType, const wxString aPro
 }
 
 
-void PROPERTY_MANAGER::registerProperty( size_t aType, PROPERTY_BASE* aProperty )
+void* PROPERTY_MANAGER::TypeCast( void* aSource, TYPE_ID aBase, TYPE_ID aDerived ) const
+{
+    if( aBase == aDerived )
+        return aSource;
+
+    auto classDesc = m_classMap.find( aBase );
+
+    if( classDesc == m_classMap.end() )
+        return aSource;
+
+    auto converters = classDesc->second.m_converters;
+    auto converter = converters.find( aDerived );
+
+    if( converter == converters.end() )
+        return aSource;
+
+    return converter->second( aSource );
+}
+
+
+void PROPERTY_MANAGER::registerProperty( PROPERTY_BASE* aProperty )
 {
     const wxString& name = aProperty->GetName();
+    TYPE_ID hash = aProperty->TypeHash();
     wxASSERT_MSG( m_properties.count( name ) == 0, "Property name conflict" );
-    m_properties[name] = make_pair( aType, aProperty );
+    m_properties.emplace( name, make_pair( hash, aProperty ) );
+}
+
+
+void PROPERTY_MANAGER::registerConverter( TYPE_CONVERTER& aConverter )
+{
+    TYPE_ID derivedHash = aConverter.GetDerivedHash();
+    CLASS_DESC& classDesc = findClass( aConverter.GetBaseHash() );
+    wxASSERT_MSG( classDesc.m_converters.count( derivedHash ) == 0,
+            "Such converter already exists" );
+    classDesc.m_converters.emplace( derivedHash, aConverter );
 }
 
 
 void PROPERTY_MANAGER::inheritsAfter( TYPE_ID aDerived, TYPE_ID aBase )
 {
     assert( aDerived != aBase );
-    CLASS_TREE_NODE& derivedNode = findClassNode( aDerived );
-    CLASS_TREE_NODE& baseNode = findClassNode( aBase );
+    CLASS_DESC& derivedNode = findClass( aDerived );
+    CLASS_DESC& baseNode = findClass( aBase );
     derivedNode.m_bases.push_back( baseNode );
 }
 
@@ -68,9 +99,9 @@ bool PROPERTY_MANAGER::isOfType( TYPE_ID aDerived, TYPE_ID aBase ) const
     if( aDerived == aBase )
         return true;
 
-    auto derived = m_classTree.find( aDerived );
+    auto derived = m_classMap.find( aDerived );
 
-    if( derived == m_classTree.end() )
+    if( derived == m_classMap.end() )
         return false;
 
     // BFS search
@@ -90,12 +121,12 @@ bool PROPERTY_MANAGER::isOfType( TYPE_ID aDerived, TYPE_ID aBase ) const
 }
 
 
-PROPERTY_MANAGER::CLASS_TREE_NODE& PROPERTY_MANAGER::findClassNode( TYPE_ID aTypeId )
+PROPERTY_MANAGER::CLASS_DESC& PROPERTY_MANAGER::findClass( TYPE_ID aTypeId )
 {
-    auto it = m_classTree.find( aTypeId );
+    auto it = m_classMap.find( aTypeId );
 
-    if( it == m_classTree.end() )
-        tie(it, ignore) = m_classTree.emplace( make_pair( aTypeId, CLASS_TREE_NODE{ aTypeId } ) );
+    if( it == m_classMap.end() )
+        tie(it, ignore) = m_classMap.emplace( make_pair( aTypeId, CLASS_DESC{ aTypeId } ) );
 
     return it->second;
 }

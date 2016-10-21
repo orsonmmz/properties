@@ -39,11 +39,15 @@ public:
     template<typename T>
     bool Set( const wxString& aProperty, T aValue )
     {
-        PROPERTY_MANAGER::TYPE_ID typeHash = typeid(*this).hash_code();
-        PROPERTY_BASE* prop = PROPERTY_MANAGER::Instance().GetProperty( typeHash, aProperty );
+        PROPERTY_MANAGER& propMgr = PROPERTY_MANAGER::Instance();
+        PROPERTY_MANAGER::TYPE_ID thisType = TYPE_HASH( *this );
+        PROPERTY_BASE* prop = propMgr.GetProperty( thisType, aProperty );
 
         if( prop )
-            prop->Set<T>( this, aValue );
+        {
+            void* object = propMgr.TypeCast( this, thisType, prop->TypeHash() );
+            prop->Set<T>( object, aValue );
+        }
 
         return prop != nullptr;
     }
@@ -51,12 +55,16 @@ public:
     template<typename T>
     boost::optional<T> Get( const wxString& aProperty )
     {
-        PROPERTY_MANAGER::TYPE_ID typeHash = typeid(*this).hash_code();
-        PROPERTY_BASE* prop = PROPERTY_MANAGER::Instance().GetProperty( typeHash, aProperty );
+        PROPERTY_MANAGER& propMgr = PROPERTY_MANAGER::Instance();
+        PROPERTY_MANAGER::TYPE_ID thisType = TYPE_HASH( *this );
+        PROPERTY_BASE* prop = propMgr.GetProperty( thisType, aProperty );
         boost::optional<T> ret;
 
         if( prop )
-            ret = prop->Get<T>( this );
+        {
+            void* object = propMgr.TypeCast( this, thisType, prop->TypeHash() );
+            ret = prop->Get<T>( object );
+        }
 
         return ret;
     }

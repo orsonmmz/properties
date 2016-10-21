@@ -6,23 +6,11 @@ using namespace std;
 
 // TODO
 // handle different types of setters/getters (const, non-const, reference, pointer)
-// handle mutliinheritance
-// traverse the class tree structure when looking for properties
-// possiblities:
-//  static map<typeindex, map<wxString, PROPERTY_BASE*> props; : does not include relationship between the classes
-//  force declaring the base type, return the basetype using typeindex : does not allow to traverse the class tree
-//  add a structure describing the class tree
-//  enforce a static map in every class (static_assert?)
 //  enums
 
 class A : public INSPECTED
 {
 public:
-    A()
-    {
-        cout << "constructing " << typeid(*this).name() << std::endl;
-    }
-
     virtual void setA( int a ) { cout << "A::setA" << endl; m_a = a; }
     virtual int getA() const { cout << "A::getA" << endl; return m_a; }
 
@@ -44,12 +32,16 @@ public:
     int getC() const { cout << "B::getC" << endl; }
 };
 
-class C
+class C : public INSPECTED
 {
 public:
     bool getBool() const { cout << "C::getBool " << endl; return m_bool; }
     void setBool( bool a ) { cout << "C::setBool " << endl; m_bool = a; }
 
+    int getNew() const { cout << "C::getNew " << endl; return m_m; }
+    void setNew( int m ) { cout << "C::setNew " << endl; m_m = m;}
+
+    int m_m;
     bool m_bool;
 };
 
@@ -71,10 +63,13 @@ static PROPERTY<A, int> prop1( "A", &A::setA, &A::getA );
 static PROPERTY<A, const wxPoint&> prop2( "point", &A::setPoint, &A::getPoint );
 static PROPERTY<B, int> prop3( "C", &B::setC, &B::getC );
 static PROPERTY<C, bool> prop4( "bool", &C::setBool, &C::getBool );
+static PROPERTY<C, int> prop6( "new", &C::setNew, &C::getNew );
 static PROPERTY<D, D::enum_test> prop5( "enum", &D::setEnum, &D::getEnum );
 static INHERITS_AFTER_BASE a( TYPE_HASH( B ), TYPE_HASH( A ) );
 static INHERITS_AFTER_BASE b( TYPE_HASH( D ), TYPE_HASH( A ) );
 static INHERITS_AFTER_BASE c( TYPE_HASH( D ), TYPE_HASH( C ) );
+static TYPE_CAST<D, C> DtoC;
+static TYPE_CAST<D, A> DtoA;
 
 main()
 {
@@ -82,21 +77,35 @@ main()
     B b;
     D d;
 
-    //a.Set( "A", 42 );
-    //b.Set( "A", 100 );
-    //b.Set( "point", wxPoint( 100, 200 ) );
-    //d.Set( "A", 23 );
-    d.Set( "bool", true );
+    cout << "&d = " << &d << endl;
+    cout << "(A*) &d = " << static_cast<A*>( &d ) << endl;
+    cout << "(C*) &d = " << static_cast<C*>( &d ) << endl;
 
-    //auto prop_a = a.Get<int>( "A" );
-    //auto prop_point = b.Get<wxPoint>( "point" );
-    //auto prop_bool = d.Get<bool>( "bool" );
-    auto prop_aa = d.Get<int>( "A" );
+    A* ptr = &a;
+    ptr->Set( "A", 42 );
 
-    //if( prop_a )
-        //cout << *prop_a << endl;
+    ptr = &b;
+    ptr->Set( "A", 100 );
+    ptr->Set( "point", wxPoint( 100, 200 ) );
 
-    //if( prop_point )
-        //cout << prop_point->x << " " << prop_point->y << endl;
+    ptr = &d;
+    ptr->Set( "A", 23 );
+    ptr->Set( "bool", true );
+    ptr->Set( "new", 128 );
+
+    ptr = &a;
+    auto prop_a = ptr->Get<int>( "A" );
+
+    ptr = &b;
+    auto prop_point = ptr->Get<wxPoint>( "point" );
+
+    ptr = &d;
+    auto prop_bool = ptr->Get<bool>( "bool" );
+    auto prop_aa = ptr->Get<int>( "A" );
+    auto prop_new = ptr->Get<int>( "new" );
+
+    cout << *prop_a << endl;
+    cout << prop_point->x << " " << prop_point->y << endl;
+    cout << *prop_bool << " " << *prop_aa << " " << *prop_new << endl;
 }
 

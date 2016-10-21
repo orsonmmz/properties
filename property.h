@@ -34,6 +34,14 @@
 #include <type_traits>
 #include <typeindex>
 
+#ifdef DEBUG_PROPERTY
+#include <map>
+std::map<size_t, std::string>& typeMap();
+#endif
+
+#define TYPE_HASH( x ) typeid( x ).hash_code()
+//#define TYPE_HASH( x ) typeid( std::decay<x>::type ).hash_code()
+
 class PROPERTY_BASE
 {
 public:
@@ -62,6 +70,8 @@ public:
         return a.As<T>();
     }
 
+    virtual size_t TypeHash() const = 0;
+
 protected:
     void registerForType( size_t aType );
     virtual void setter( void* aObject, wxAny& aValue ) = 0;
@@ -70,7 +80,6 @@ protected:
 private:
     wxString m_name;
 };
-
 
 template<typename Owner, typename T>
 class PROPERTY : public PROPERTY_BASE
@@ -83,11 +92,20 @@ public:
     PROPERTY( const wxString& name, SETTER s, GETTER g ) :
         PROPERTY_BASE( name ), m_setter( s ), m_getter( g )
     {
-        registerForType( typeid( Owner ).hash_code() );
+        registerForType( TYPE_HASH( Owner ) );
+
+#ifdef DEBUG_PROPERTY
+        typeMap()[TYPE_HASH( Owner )] = typeid( Owner ).name();
+#endif
 
         //static_assert(std::is_same<decltype(&Owner::AddProperty),
                 //void (Owner::*)(const wxString&, PROPERTY_BASE*)>::value,
                             //"Class does not define a static AddProperty() method");
+    }
+
+    size_t TypeHash() const override
+    {
+        return TYPE_HASH( Owner );
     }
 
 protected:
@@ -110,12 +128,48 @@ protected:
 };
 
 
+class TYPE_CONVERTER
+{
+public:
+    virtual void* operator()( void* aPointer ) const = 0;
+    virtual size_t GetBaseHash() const = 0;
+    virtual size_t GetDerivedHash() const = 0;
+
+protected:
+    void registerConverter();
+};
+
+
+template<typename Base, typename Derived>
+class TYPE_CAST : public TYPE_CONVERTER
+{
+public:
+    TYPE_CAST()
+    {
+        registerConverter();
+    }
+
+    void* operator()( void* aPointer ) const override
+    {
+        Base* base = reinterpret_cast<Base*>( aPointer );
+        return static_cast<Derived*>( base );
+    }
+
+    size_t GetBaseHash() const override
+    {
+        return TYPE_HASH( Base );
+    }
+
+    size_t GetDerivedHash() const override
+    {
+        return TYPE_HASH( Derived );
+    }
+};
+
+
 struct INHERITS_AFTER_BASE
 {
     INHERITS_AFTER_BASE( size_t aDerived, size_t aBase );
 };
-
-#define TYPE_HASH( x ) typeid( x ).hash_code()
-//#define INHERITS_AFTER( a, b ) INHERITS_AFTER_BASE( typeid( a ).hash_code(), typeid( b ).hash_code() )
 
 #endif /* PROPERTY_H */
