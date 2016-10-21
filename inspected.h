@@ -29,11 +29,23 @@
 #include "property_mgr.h"
 #include "property.h"
 
+#include <boost/optional.hpp>
+
 class INSPECTED
 {
 public:
     virtual ~INSPECTED()
     {
+    }
+
+    template<typename T>
+    void Set( PROPERTY_BASE* aProperty, T aValue )
+    {
+        // TODO check if property belongs to this class?
+        PROPERTY_MANAGER& propMgr = PROPERTY_MANAGER::Instance();
+        PROPERTY_MANAGER::TYPE_ID thisType = TYPE_HASH( *this );
+        void* object = propMgr.TypeCast( this, thisType, aProperty->TypeHash() );
+        aProperty->set<T>( object, aValue );
     }
 
     template<typename T>
@@ -46,10 +58,19 @@ public:
         if( prop )
         {
             void* object = propMgr.TypeCast( this, thisType, prop->TypeHash() );
-            prop->Set<T>( object, aValue );
+            prop->set<T>( object, aValue );
         }
 
         return prop != nullptr;
+    }
+
+    template<typename T>
+    T Get( PROPERTY_BASE* aProperty )
+    {
+        PROPERTY_MANAGER& propMgr = PROPERTY_MANAGER::Instance();
+        PROPERTY_MANAGER::TYPE_ID thisType = TYPE_HASH( *this );
+        void* object = propMgr.TypeCast( this, thisType, aProperty->TypeHash() );
+        return aProperty->get<T>( object );
     }
 
     template<typename T>
@@ -63,12 +84,11 @@ public:
         if( prop )
         {
             void* object = propMgr.TypeCast( this, thisType, prop->TypeHash() );
-            ret = prop->Get<T>( object );
+            ret = prop->get<T>( object );
         }
 
         return ret;
     }
 };
-
 
 #endif /* INSPECTED_H */

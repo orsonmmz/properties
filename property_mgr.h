@@ -28,6 +28,7 @@
 
 #include <wx/string.h>
 
+#include <list>
 #include <map>
 #include <memory>
 #include <vector>
@@ -39,6 +40,7 @@ class PROPERTY_MANAGER
 {
 public:
     using TYPE_ID = size_t;
+    using PROPERTY_LIST = std::list<PROPERTY_BASE*>;
 
     static PROPERTY_MANAGER& Instance()
     {
@@ -47,6 +49,7 @@ public:
     }
 
     PROPERTY_BASE* GetProperty( TYPE_ID aType, const wxString aProperty ) const;
+    PROPERTY_LIST GetProperties( TYPE_ID aType ) const;
     void* TypeCast( void* aSource, TYPE_ID aBase, TYPE_ID aDerived ) const;
 
     void AddProperty( PROPERTY_BASE* aProperty );
@@ -62,6 +65,7 @@ private:
     {
         TYPE_ID m_id;
         std::vector<std::reference_wrapper<CLASS_DESC>> m_bases;
+        std::map<wxString, PROPERTY_BASE*> m_properties;
         std::map<TYPE_ID, TYPE_CAST_BASE*> m_typeCasts;
     };
 
@@ -69,7 +73,8 @@ private:
     std::map<TYPE_ID, CLASS_DESC> m_classes;
 
     bool isOfType( TYPE_ID aDerived, TYPE_ID aBase ) const;
-    CLASS_DESC& findClass( TYPE_ID aTypeId );
+    CLASS_DESC& getClass( TYPE_ID aTypeId );
+    void getPropertiesRecur( const CLASS_DESC& aClass, PROPERTY_LIST& aResult ) const;
 };
 
 #endif /* PROPERTY_MGR_H */

@@ -6,7 +6,8 @@ using namespace std;
 
 // TODO
 // handle different types of setters/getters (const, non-const, reference, pointer)
-//  enums
+// get a list of properties for a type
+// enums
 
 class A : public INSPECTED
 {
@@ -89,7 +90,6 @@ public:
         PROPERTY_MANAGER& propMgr = PROPERTY_MANAGER::Instance();
         propMgr.AddProperty( new PROPERTY<C, bool>( "bool", &C::setBool, &C::getBool ) );
         propMgr.AddProperty( new PROPERTY<C, int>( "new", &C::setNew, &C::getNew ) );
-        propMgr.InheritsAfter( TYPE_HASH( C ), TYPE_HASH( A ) );
     }
 } _CLASS_C_DESC;
 
@@ -144,5 +144,8 @@ int main()
     cout << *prop_a << endl;
     cout << prop_point->x << " " << prop_point->y << endl;
     cout << *prop_bool << " " << *prop_aa << " " << *prop_new << endl;
+
+    for( const auto& p : PROPERTY_MANAGER::Instance().GetProperties( TYPE_HASH( *ptr ) ) )
+        cout << p->Name() << endl;
 }
 

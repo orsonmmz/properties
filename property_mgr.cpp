@@ -46,6 +46,22 @@ PROPERTY_BASE* PROPERTY_MANAGER::GetProperty( TYPE_ID aType, const wxString aPro
 }
 
 
+std::list<PROPERTY_BASE*> PROPERTY_MANAGER::GetProperties( TYPE_ID aType ) const
+{
+    /// @todo caching?
+    std::list<PROPERTY_BASE*> result;
+
+    auto classDesc = m_classes.find( aType );
+
+    if( classDesc == m_classes.end() )
+        return result;
+
+    getPropertiesRecur( classDesc->second, result );
+
+    return result;
+}
+
+
 void* PROPERTY_MANAGER::TypeCast( void* aSource, TYPE_ID aBase, TYPE_ID aDerived ) const
 {
     if( aBase == aDerived )
@@ -73,13 +89,15 @@ void PROPERTY_MANAGER::AddProperty( PROPERTY_BASE* aProperty )
 
     TYPE_ID hash = aProperty->TypeHash();
     m_properties.emplace( name, make_pair( hash, aProperty ) );
+    CLASS_DESC& classDesc = getClass( hash );
+    classDesc.m_properties.emplace( name, aProperty );
 }
 
 
 void PROPERTY_MANAGER::AddTypeCast( TYPE_CAST_BASE* aCast )
 {
     TYPE_ID derivedHash = aCast->DerivedHash();
-    CLASS_DESC& classDesc = findClass( aCast->BaseHash() );
+    CLASS_DESC& classDesc = getClass( aCast->BaseHash() );
     auto& typeCasts = classDesc.m_typeCasts;
     wxASSERT_MSG( typeCasts.count( derivedHash ) == 0, "Such converter already exists" );
     typeCasts.emplace( derivedHash, aCast );
@@ -90,8 +108,8 @@ void PROPERTY_MANAGER::InheritsAfter( TYPE_ID aDerived, TYPE_ID aBase )
 {
     wxASSERT_MSG( aDerived != aBase, "Class cannot inherit from itself" );
 
-    CLASS_DESC& derived = findClass( aDerived );
-    CLASS_DESC& base = findClass( aBase );
+    CLASS_DESC& derived = getClass( aDerived );
+    CLASS_DESC& base = getClass( aBase );
     derived.m_bases.push_back( base );
 
     wxASSERT_MSG( derived.m_bases.size() == 1
@@ -127,12 +145,23 @@ bool PROPERTY_MANAGER::isOfType( TYPE_ID aDerived, TYPE_ID aBase ) const
 }
 
 
-PROPERTY_MANAGER::CLASS_DESC& PROPERTY_MANAGER::findClass( TYPE_ID aTypeId )
+PROPERTY_MANAGER::CLASS_DESC& PROPERTY_MANAGER::getClass( TYPE_ID aTypeId )
 {
     auto it = m_classes.find( aTypeId );
 
     if( it == m_classes.end() )
-        tie(it, ignore) = m_classes.emplace( make_pair( aTypeId, CLASS_DESC{ aTypeId } ) );
+        tie( it, ignore ) = m_classes.emplace( make_pair( aTypeId, CLASS_DESC{ aTypeId } ) );
 
     return it->second;
+}
+
+
+void PROPERTY_MANAGER::getPropertiesRecur( const CLASS_DESC& aClass,
+        PROPERTY_LIST& aResult ) const
+{
+    for( auto& property : aClass.m_properties )
+        aResult.push_back( property.second );
+
+    for( const auto& base : aClass.m_bases )
+        getPropertiesRecur( base, aResult );
 }

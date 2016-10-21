@@ -29,10 +29,10 @@
 #include <wx/any.h>
 #include <wx/string.h>
 
-#include <boost/optional.hpp>
-
 #include <type_traits>
 #include <typeindex>
+
+class INSPECTED;
 
 #define TYPE_HASH( x ) typeid( x ).hash_code()
 //#define TYPE_HASH( x ) typeid( std::decay<x>::type ).hash_code()
@@ -54,28 +54,30 @@ public:
         return m_name;
     }
 
+    virtual size_t TypeHash() const = 0;
+
+protected:
     template<typename T>
-    void Set( void* aObject, T aValue )
+    void set( void* aObject, T aValue )
     {
         wxAny a = aValue;
         setter( aObject, a );
     }
 
     template<typename T>
-    T Get( void* aObject )
+    T get( void* aObject )
     {
         wxAny a = getter( aObject );
         return a.As<T>();
     }
 
-    virtual size_t TypeHash() const = 0;
-
-protected:
     virtual void setter( void* aObject, wxAny& aValue ) = 0;
     virtual wxAny getter( void* aObject ) = 0;
 
 private:
-    wxString m_name;
+    const wxString m_name;
+
+    friend class INSPECTED;
 };
 
 
